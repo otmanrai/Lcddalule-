@@ -1,0 +1,130 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- User Profiles ---
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) 
+                     && incoming().createdAt == existing().createdAt;
+
+      function isValidUser(data) {
+        return data.keys().hasAll(['id', 'email', 'isSubscribed', 'createdAt'])
+          && data.id == request.auth.uid
+          && data.email is string
+          && data.isSubscribed is bool
+          && (data.subscriptionExpiry == null || data.subscriptionExpiry is number)
+          && data.createdAt is number
+          && data.keys().size() <= 8; // Allowing for some extra fields like displayName, photoURL
+      }
+    }
+
+    // --- Suggestions ---
+    match /suggestions/{suggestionId} {
+      allow read: if true;
+      allow delete: if isSignedIn() && (request.auth.token.email == 'dracola.33@gmail.com' || request.auth.uid == 'admin');
+      allow create: if isSignedIn() && isValidId(suggestionId) && isValidSuggestion(incoming()) 
+                    && incoming().createdBy == request.auth.uid
+                    && incoming().likesCount == 0
+                    && incoming().dislikesCount == 0
+                    && incoming().isApproved == false;
+      
+      // Updates usually triggered by votes or approval logic
+      // In a real app, this might be a Cloud Function, but if we do it client-side:
+      allow update: if (isSignedIn() && (request.auth.token.email == 'dracola.33@gmail.com' || request.auth.uid == 'admin')) || (isSignedIn() && isValidSuggestion(incoming()) && (
+        // Action: Vote Update (usually increment/decrement)
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'dislikesCount', 'isApproved']))
+        || 
+        // Action: Edit (only by owner, cannot change votes or approval)
+        (isOwner(existing().createdBy) && existing().isApproved == false 
+          && incoming().diff(existing()).affectedKeys().hasOnly(['brand', 'model', 'suggestedCompatibleCode', 'imageUrl']))
+      ));
+
+      function isValidSuggestion(data) {
+        return data.keys().hasAll(['id', 'brand', 'model', 'suggestedCompatibleCode', 'likesCount', 'dislikesCount', 'isApproved', 'createdBy', 'createdAt'])
+          && data.brand is string && data.brand.size() <= 128
+          && data.model is string && data.model.size() <= 128
+          && data.suggestedCompatibleCode is string && data.suggestedCompatibleCode.size() <= 128
+          && data.likesCount is number
+          && data.dislikesCount is number
+          && data.isApproved is bool
+          && data.createdBy is string
+          && data.createdAt is number
+          && (!data.keys().contains('imageUrl') || data.imageUrl is string);
+      }
+
+      // Votes subcollection
+      match /votes/{userId} {
+        allow read: if true;
+        allow write: if isOwner(userId) && isValidVote(incoming());
+
+        function isValidVote(data) {
+          return data.keys().hasAll(['userId', 'suggestionId', 'isLike', 'createdAt'])
+            && data.userId == request.auth.uid
+            && data.suggestionId == suggestionId
+            && data.isLike is bool
+            && data.createdAt is number;
+        }
+      }
+    }
+
+    match /model_metadata/{modelId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    // --- Visits Tracking ---
+    match /visits/{visitId} {
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        request.auth.token.email == 'dracola.33@gmail.com' || 
+        request.auth.uid == 'admin' ||
+        (resource != null && existing().userId == request.auth.uid)
+      );
+      allow read: if isSignedIn() && (
+        request.auth.token.email == 'dracola.33@gmail.com' || 
+        request.auth.uid == 'admin' ||
+        (resource != null && resource.data.userId == request.auth.uid)
+      );
+      allow delete: if isSignedIn() && (request.auth.token.email == 'dracola.33@gmail.com' || request.auth.uid == 'admin');
+    }
+
+    // --- Google Ad and System Settings ---
+    match /settings/{documentId} {
+      allow read: if true;
+      allow write: if isSignedIn() && (request.auth.token.email == 'dracola.33@gmail.com' || request.auth.uid == 'admin');
+    }
+
+    // --- AI Generated Models & Compatibilities (DeepSeek Studio) ---
+    match /ai_models/{modelId} {
+      allow read: if true;
+      allow write: if isSignedIn() && (request.auth.token.email == 'dracola.33@gmail.com' || request.auth.uid == 'admin');
+    }
+  }
+}

@@ -1,0 +1,2 @@
+# Google AdSense ads.txt configuration file
+google.com, pub-1522797161972650, DIRECT, f08c47fec0942fa0

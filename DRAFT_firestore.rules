@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- User Profiles ---
+    match /users/{userId} {
+      allow read: if isSignedIn(); // Can see other users? Maybe limited.
+      allow write: if isOwner(userId) && isValidUser(incoming());
+
+      function isValidUser(data) {
+        return data.keys().hasAll(['id', 'email', 'isSubscribed', 'createdAt'])
+          && data.id == request.auth.uid
+          && data.email is string
+          && data.isSubscribed is bool
+          && (data.subscriptionExpiry == null || data.subscriptionExpiry is number)
+          && data.createdAt is number;
+      }
+    }
+
+    // --- Suggestions ---
+    match /suggestions/{suggestionId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidSuggestion(incoming()) && incoming().createdBy == request.auth.uid;
+      allow update: if (
+        isSignedIn() && (
+          // System update for likes/dislikes/approval or User update their own?
+          // Actually, voting will be done via transaction or separate votes collection
+          // For simplicity, we allow people to update counts ONLY through specific branches
+          (isVoteAction() && incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'dislikesCount', 'isApproved']))
+          || (isOwner(existing().createdBy) && incoming().diff(existing()).affectedKeys().hasOnly(['brand', 'model', 'suggestedCompatibleCode']))
+        )
+      );
+
+      function isValidSuggestion(data) {
+        return data.keys().hasAll(['id', 'brand', 'model', 'suggestedCompatibleCode', 'likesCount', 'dislikesCount', 'isApproved', 'createdBy', 'createdAt'])
+          && data.brand is string && data.brand.size() <= 100
+          && data.model is string && data.model.size() <= 100
+          && data.likesCount is number
+          && data.dislikesCount is number
+          && data.isApproved is bool
+          && data.createdAt is number;
+      }
+
+      function isVoteAction() {
+        return true; // Simplified for draft
+      }
+
+      // Votes subcollection
+      match /votes/{userId} {
+        allow read: if true;
+        allow write: if isOwner(userId) && isValidVote(incoming());
+
+        function isValidVote(data) {
+          return data.keys().hasAll(['userId', 'suggestionId', 'isLike', 'createdAt'])
+            && data.userId == request.auth.uid
+            && data.suggestionId == suggestionId
+            && data.isLike is bool;
+        }
+      }
+    }
+  }
+}

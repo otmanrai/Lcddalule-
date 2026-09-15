@@ -1,0 +1,11 @@
+# Standard robots.txt rules for LCD Dalule
+User-agent: *
+Allow: /
+Allow: /index.html
+Allow: /amp.html
+
+# Prevent indexing of private administrative paths or auth status callbacks
+Disallow: /api/
+Disallow: /admin/
+
+Sitemap: https://dalule.app/sitemap.xml

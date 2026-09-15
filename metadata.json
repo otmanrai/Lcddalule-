@@ -1,0 +1,6 @@
+{
+  "name": "LCD DALULE",
+  "description": "Find compatible phone parts (LCDs, IC chips, Batteries) Instantly. Perfect for repair technicians.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

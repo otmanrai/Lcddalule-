@@ -1,0 +1,103 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Information about the user including subscription status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "isSubscribed": { "type": "boolean" },
+        "subscriptionExpiry": { "type": "number", "description": "Timestamp in milliseconds" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "email", "isSubscribed"]
+    },
+    "Suggestion": {
+      "title": "Community Suggestion",
+      "description": "Suggested LCD compatibility matches from users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "brand": { "type": "string" },
+        "model": { "type": "string" },
+        "suggestedCompatibleCode": { "type": "string" },
+        "likesCount": { "type": "number" },
+        "dislikesCount": { "type": "number" },
+        "isApproved": { "type": "boolean" },
+        "createdBy": { "type": "string", "description": "User ID of the suggester" },
+        "createdByEmail": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "imageUrl": { "type": "string", "description": "Base64 or URL of the matched hardware screen screenshot" }
+      },
+      "required": ["id", "brand", "model", "suggestedCompatibleCode", "likesCount", "dislikesCount", "isApproved", "createdBy", "createdAt"]
+    },
+    "Vote": {
+      "title": "Vote",
+      "description": "User vote on a suggestion",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "suggestionId": { "type": "string" },
+        "isLike": { "type": "boolean" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "suggestionId", "isLike", "createdAt"]
+    },
+    "Visit": {
+      "title": "Visit Traffic Log",
+      "description": "Tracks traffic source, user device details, and latest loaded screens for registered users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "referrer": { "type": "string" },
+        "utmSource": { "type": "string" },
+        "utmMedium": { "type": "string" },
+        "utmCampaign": { "type": "string" },
+        "userAgent": { "type": "string" },
+        "device": { "type": "string" },
+        "os": { "type": "string" },
+        "browser": { "type": "string" },
+        "lastScreen": { "type": "string" },
+        "screenResolution": { "type": "string" },
+        "language": { "type": "string" },
+        "countryCode": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "lastActive": { "type": "number" }
+      },
+      "required": ["id", "userId", "userEmail", "referrer", "timestamp", "lastActive"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/suggestions/{suggestionId}": {
+      "schema": "Suggestion",
+      "description": "Community suggestions"
+    },
+    "/suggestions/{suggestionId}/votes/{userId}": {
+      "schema": "Vote",
+      "description": "Votes on a specific suggestion"
+    },
+    "/model_metadata/{modelId}": {
+      "description": "Metadata for phone models like images"
+    },
+    "/visits/{visitId}": {
+      "schema": "Visit",
+      "description": "Registered user visit tracking"
+    },
+    "/ai_models/{modelId}": {
+      "description": "AI-generated phone models and hardware compatibility records powered by DeepSeek"
+    },
+    "/settings/{documentId}": {
+      "description": "App settings, ad configurations, and DeepSeek security shield controls"
+    }
+  }
+}
