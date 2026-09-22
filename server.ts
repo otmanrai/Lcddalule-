@@ -484,10 +484,28 @@ Keep your response concise, structured, clear, and actionable in ${language === 
     const sitemapUrl = `${protocol}://${host}/sitemap.xml`;
     
     res.type('text/plain');
-    res.send(`User-agent: *\nAllow: /\n\nSitemap: ${sitemapUrl}`);
+    res.send(`User-agent: *
+Allow: /
+Allow: /amp.html
+Disallow: /api/
+Disallow: /admin/
+Disallow: /404
+Disallow: /404.html
+
+Sitemap: ${sitemapUrl}`);
   });
 
-  // 2. Sitemap.xml Route
+  // 2. Explicit 404 Route for Crawlers and Users (Returns HTTP 404)
+  app.get(['/404', '/404.html'], (_req, res) => {
+    const notFoundPath = path.join(process.cwd(), 'public', '404.html');
+    if (fs.existsSync(notFoundPath)) {
+      res.status(404).sendFile(notFoundPath);
+    } else {
+      res.status(404).send('404 Not Found - LCD DALULE');
+    }
+  });
+
+  // 3. Sitemap.xml Route - Comprehensive indexing for search engine crawlers
   app.get('/sitemap.xml', async (req, res) => {
     const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
     const host = req.get('host');
@@ -535,27 +553,76 @@ Keep your response concise, structured, clear, and actionable in ${language === 
       console.error("Error fetching suggestions for sitemap from Firestore:", e);
     }
 
-    // Generate XML blocks
-    let urlsXml = `  <url>
-    <loc>${protocol}://${host}/</loc>
-    <lastmod>${today}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>`;
+    // D. Fetch dynamic model IDs from Firestore 'ai_models' (DeepSeek Studio models)
+    try {
+      const aiModelsCol = collection(db, 'ai_models');
+      const querySnapshot = await getDocs(aiModelsCol);
+      querySnapshot.forEach((doc) => {
+        if (doc.id) {
+          modelIds.add(doc.id);
+        }
+      });
+    } catch (e) {
+      console.error("Error fetching ai_models for sitemap from Firestore:", e);
+    }
 
+    // Core Hub & Section URLs with priorities
+    const hubPages = [
+      { url: `${protocol}://${host}/`, priority: '1.0', changefreq: 'daily' },
+      { url: `${protocol}://${host}/amp.html`, priority: '0.9', changefreq: 'daily' },
+      // Categories
+      { url: `${protocol}://${host}/?category=LCD`, priority: '0.9', changefreq: 'daily' },
+      { url: `${protocol}://${host}/?category=BATTERY`, priority: '0.85', changefreq: 'daily' },
+      { url: `${protocol}://${host}/?category=IC`, priority: '0.85', changefreq: 'daily' },
+      { url: `${protocol}://${host}/?category=SCREEN_PROTECTOR`, priority: '0.8', changefreq: 'weekly' },
+      // Brands
+      { url: `${protocol}://${host}/?brand=samsung`, priority: '0.9', changefreq: 'daily' },
+      { url: `${protocol}://${host}/?brand=xiaomi`, priority: '0.9', changefreq: 'daily' },
+      { url: `${protocol}://${host}/?brand=apple`, priority: '0.9', changefreq: 'daily' },
+      { url: `${protocol}://${host}/?brand=infinix`, priority: '0.85', changefreq: 'daily' },
+      { url: `${protocol}://${host}/?brand=tecno`, priority: '0.85', changefreq: 'daily' },
+      { url: `${protocol}://${host}/?brand=itel`, priority: '0.8', changefreq: 'weekly' },
+      { url: `${protocol}://${host}/?brand=oppo`, priority: '0.85', changefreq: 'daily' },
+      { url: `${protocol}://${host}/?brand=realme`, priority: '0.85', changefreq: 'daily' },
+      { url: `${protocol}://${host}/?brand=vivo`, priority: '0.8', changefreq: 'weekly' },
+      { url: `${protocol}://${host}/?brand=honor`, priority: '0.8', changefreq: 'weekly' },
+      { url: `${protocol}://${host}/?brand=huawei`, priority: '0.8', changefreq: 'weekly' },
+      // Interactive Tools
+      { url: `${protocol}://${host}/?screen=comparator`, priority: '0.85', changefreq: 'weekly' },
+      { url: `${protocol}://${host}/?screen=community`, priority: '0.85', changefreq: 'daily' },
+      { url: `${protocol}://${host}/?screen=search`, priority: '0.8', changefreq: 'weekly' },
+      { url: `${protocol}://${host}/?screen=ai`, priority: '0.75', changefreq: 'weekly' },
+      // Legal & Info
+      { url: `${protocol}://${host}/?screen=about`, priority: '0.6', changefreq: 'monthly' },
+      { url: `${protocol}://${host}/?screen=privacy`, priority: '0.5', changefreq: 'monthly' },
+      { url: `${protocol}://${host}/?screen=terms`, priority: '0.5', changefreq: 'monthly' },
+      { url: `${protocol}://${host}/?screen=contact`, priority: '0.6', changefreq: 'monthly' },
+    ];
+
+    let urlsXml = '';
+    hubPages.forEach(page => {
+      urlsXml += `  <url>
+    <loc>${page.url}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${page.changefreq}</changefreq>
+    <priority>${page.priority}</priority>
+  </url>\n`;
+    });
+
+    // Model Specific Landing URLs
     modelIds.forEach(modelId => {
       const safeId = modelId.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      urlsXml += `\n  <url>
+      urlsXml += `  <url>
     <loc>${protocol}://${host}/?model=${safeId}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>`;
+    <priority>0.85</priority>
+  </url>\n`;
     });
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urlsXml}
+${urlsXml.trim()}
 </urlset>`;
 
     res.type('application/xml');

@@ -61,6 +61,7 @@ import Markdown from 'react-markdown';
 import ComparatorScreen from './components/ComparatorScreen';
 import LegalPage from './components/LegalPages';
 import DeepSeekDevStudio from './components/DeepSeekDevStudio';
+import NotFoundPage from './components/NotFoundPage';
 import { FirebaseProvider, useAuth } from './components/FirebaseProvider';
 import { signInWithGoogle, logout, subscribeUser, db, addImageToModel, signInWithEmail, signUpWithEmail, auth } from './lib/firebase';
 import { 
@@ -77,7 +78,7 @@ import {
   updateDoc
 } from 'firebase/firestore';
 
-type Screen = 'HOME' | 'COMPATIBILITY_FLOW' | 'BRAND_SELECT' | 'MODEL_SELECT' | 'RESULTS' | 'COMMUNITY' | 'SETTINGS' | 'AI_ASSISTANT' | 'GLOBAL_SEARCH' | 'COMPARATOR' | 'PRIVACY_POLICY' | 'TERMS_OF_SERVICE' | 'ABOUT_US' | 'CONTACT_US';
+type Screen = 'HOME' | 'COMPATIBILITY_FLOW' | 'BRAND_SELECT' | 'MODEL_SELECT' | 'RESULTS' | 'COMMUNITY' | 'SETTINGS' | 'AI_ASSISTANT' | 'GLOBAL_SEARCH' | 'COMPARATOR' | 'PRIVACY_POLICY' | 'TERMS_OF_SERVICE' | 'ABOUT_US' | 'CONTACT_US' | 'NOT_FOUND';
 type Category = 'LCD' | 'IC' | 'SCREEN_PROTECTOR' | 'BATTERY';
 
 interface CategoryConfig {
@@ -576,27 +577,125 @@ function AppContent() {
     return unsubscribe;
   }, []);
 
-  // Set up dynamic model deep-linking via query parameters for SEO crawling
+  // Set up dynamic routing & deep-linking for Search Engine Robots & Users
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const modelId = params.get('model');
-      if (modelId) {
-        // Find matching model from static phoneModels
-        const model = phoneModels.find(m => m.id === modelId);
-        if (model) {
-          const brand = brands.find(b => b.id === model.brandId) || null;
-          setSelectedBrand(brand);
-          setSelectedModel(model);
-          // Auto route to results page for the crawler/user
-          const catParam = params.get('category');
-          if (catParam && ['LCD', 'IC', 'SCREEN_PROTECTOR', 'BATTERY'].includes(catParam)) {
-            setSelectedCategory(catParam as Category);
-          }
-          setCurrentScreen('RESULTS');
-        }
+    if (typeof window === 'undefined') return;
+
+    const pathname = window.location.pathname.toLowerCase();
+    const params = new URLSearchParams(window.location.search);
+    const screenParam = (params.get('screen') || '').toLowerCase();
+    const modelId = params.get('model');
+    const brandParam = (params.get('brand') || '').toLowerCase();
+    const catParam = (params.get('category') || '').toUpperCase();
+    const searchParam = params.get('search') || params.get('q');
+
+    // 1. Check for Category parameter
+    if (catParam && ['LCD', 'IC', 'SCREEN_PROTECTOR', 'BATTERY'].includes(catParam)) {
+      setSelectedCategory(catParam as Category);
+    }
+
+    // 2. Check for explicit 404 route
+    if (pathname === '/404' || pathname === '/404.html' || pathname === '/not-found' || screenParam === '404') {
+      setCurrentScreen('NOT_FOUND');
+      return;
+    }
+
+    // 3. Check for Model deep-link
+    if (modelId) {
+      const model = phoneModels.find(m => m.id.toLowerCase() === modelId.toLowerCase());
+      if (model) {
+        const brand = brands.find(b => b.id === model.brandId) || null;
+        setSelectedBrand(brand);
+        setSelectedModel(model);
+        setCurrentScreen('RESULTS');
+        return;
       }
     }
+
+    // 4. Check for Brand deep-link
+    if (brandParam) {
+      const brand = brands.find(b => b.id.toLowerCase() === brandParam || b.name.toLowerCase() === brandParam);
+      if (brand) {
+        setSelectedBrand(brand);
+        setCurrentScreen('MODEL_SELECT');
+        return;
+      }
+    }
+
+    // 5. Check for Search parameter
+    if (searchParam) {
+      setInitialSearchQuery(searchParam);
+      setCurrentScreen('GLOBAL_SEARCH');
+      return;
+    }
+
+    // 6. Check for App Pages
+    if (screenParam === 'comparator' || pathname === '/comparator') {
+      setCurrentScreen('COMPARATOR');
+      return;
+    }
+    if (screenParam === 'community' || pathname === '/community') {
+      setCurrentScreen('COMMUNITY');
+      return;
+    }
+    if (screenParam === 'search' || pathname === '/search') {
+      setCurrentScreen('GLOBAL_SEARCH');
+      return;
+    }
+    if (screenParam === 'ai' || pathname === '/ai') {
+      setCurrentScreen('AI_ASSISTANT');
+      return;
+    }
+    if (screenParam === 'brands' || pathname === '/brands') {
+      setCurrentScreen('BRAND_SELECT');
+      return;
+    }
+    if (screenParam === 'about' || pathname === '/about' || pathname === '/about-us') {
+      setCurrentScreen('ABOUT_US');
+      return;
+    }
+    if (screenParam === 'privacy' || pathname === '/privacy' || pathname === '/privacy-policy') {
+      setCurrentScreen('PRIVACY_POLICY');
+      return;
+    }
+    if (screenParam === 'terms' || pathname === '/terms' || pathname === '/terms-of-service') {
+      setCurrentScreen('TERMS_OF_SERVICE');
+      return;
+    }
+    if (screenParam === 'contact' || pathname === '/contact' || pathname === '/contact-us') {
+      setCurrentScreen('CONTACT_US');
+      return;
+    }
+
+    // 7. If model was requested but does not exist in our catalog -> Show 404
+    if (modelId) {
+      setCurrentScreen('NOT_FOUND');
+      return;
+    }
+
+    // 8. If an unknown clean path was entered (not root or known asset/amp) -> Show 404
+    if (pathname !== '/' && pathname !== '/index.html' && pathname !== '/amp.html' && !pathname.startsWith('/@') && !pathname.startsWith('/src')) {
+      setCurrentScreen('NOT_FOUND');
+      return;
+    }
+  }, []);
+
+  // Listen to popstate for browser Back/Forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window === 'undefined') return;
+      const params = new URLSearchParams(window.location.search);
+      const screenParam = (params.get('screen') || '').toUpperCase();
+      if (screenParam === '404') {
+        setCurrentScreen('NOT_FOUND');
+      } else if (screenParam && ['HOME', 'COMMUNITY', 'SETTINGS', 'AI_ASSISTANT', 'GLOBAL_SEARCH', 'COMPARATOR', 'PRIVACY_POLICY', 'TERMS_OF_SERVICE', 'ABOUT_US', 'CONTACT_US', 'BRAND_SELECT'].includes(screenParam)) {
+        setCurrentScreen(screenParam as Screen);
+      } else if (!window.location.search && window.location.pathname === '/') {
+        setCurrentScreen('HOME');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const handleSaveGoogleAds = async (newAds: any) => {
@@ -917,6 +1016,32 @@ function AppContent() {
     }
 
     setCurrentScreen(screen);
+
+    // Sync clean URL for browser history and indexing
+    if (typeof window !== 'undefined' && window.history) {
+      try {
+        const screenParamMap: Partial<Record<Screen, string>> = {
+          HOME: '/',
+          COMPARATOR: '/?screen=comparator',
+          COMMUNITY: '/?screen=community',
+          GLOBAL_SEARCH: '/?screen=search',
+          AI_ASSISTANT: '/?screen=ai',
+          SETTINGS: '/?screen=settings',
+          BRAND_SELECT: '/?screen=brands',
+          ABOUT_US: '/?screen=about',
+          PRIVACY_POLICY: '/?screen=privacy',
+          TERMS_OF_SERVICE: '/?screen=terms',
+          CONTACT_US: '/?screen=contact',
+          NOT_FOUND: '/404'
+        };
+        const targetUrl = screenParamMap[screen];
+        if (targetUrl) {
+          window.history.pushState({ screen }, '', targetUrl);
+        }
+      } catch (e) {
+        // ignore pushState errors
+      }
+    }
   };
 
   const handleCategorySelect = (category: Category) => {
@@ -943,6 +1068,18 @@ function AppContent() {
     setSelectedModel(model);
     setSelectedCategory(category);
     navigateTo('RESULTS');
+
+    if (typeof window !== 'undefined' && window.history) {
+      try {
+        window.history.pushState(
+          { modelId: model.id, category },
+          '',
+          `/?model=${encodeURIComponent(model.id)}&category=${encodeURIComponent(category)}`
+        );
+      } catch (e) {
+        // ignore pushState errors
+      }
+    }
   };
 
   const voteForSuggestion = async (suggestionId: string, isLike: boolean) => {
@@ -1443,6 +1580,24 @@ function AppContent() {
               pageType="CONTACT"
               language={language}
               onBack={() => navigateTo('HOME')}
+            />
+          )}
+
+          {currentScreen === 'NOT_FOUND' && (
+            <NotFoundPage
+              key="not-found"
+              language={language}
+              onNavigateHome={() => navigateTo('HOME')}
+              onNavigateSearch={(query?: string) => {
+                if (query) setInitialSearchQuery(query);
+                navigateTo('GLOBAL_SEARCH');
+              }}
+              onSelectBrand={(brand) => {
+                setSelectedBrand(brand);
+                navigateTo('MODEL_SELECT');
+              }}
+              onSelectCategory={(cat) => handleCategorySelect(cat)}
+              onNavigateScreen={(screen: Screen) => navigateTo(screen)}
             />
           )}
         </AnimatePresence>
@@ -2049,6 +2204,43 @@ function HomeScreen({ onSelectCategory, onNavigateComparator, onNavigateLegal, o
               <span>{isAr ? 'شروط الخدمة' : 'Terms of Service'}</span>
             </button>
           </div>
+
+          {/* Crawlable SEO & Indexing Links for Bots and Users */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-3 pt-3 border-t border-midnight-teal/20 text-[10px] text-gray-green font-bold">
+            <a
+              href="/sitemap.xml"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-1 bg-obsidian/40 hover:bg-slate-teal border border-midnight-teal/40 rounded-lg text-cyber-cyan hover:text-white transition-all flex items-center gap-1"
+            >
+              <ExternalLink size={10} />
+              <span>{isAr ? 'خريطة الفهرسة (Sitemap.xml)' : 'Sitemap.xml'}</span>
+            </a>
+            <a
+              href="/amp.html"
+              className="px-2.5 py-1 bg-obsidian/40 hover:bg-slate-teal border border-midnight-teal/40 rounded-lg text-amber-400 hover:text-white transition-all flex items-center gap-1"
+            >
+              <Sparkles size={10} />
+              <span>{isAr ? 'نسخة AMP السريعة' : 'AMP Fast View'}</span>
+            </a>
+            <a
+              href="/robots.txt"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-1 bg-obsidian/40 hover:bg-slate-teal border border-midnight-teal/40 rounded-lg text-gray-green hover:text-white transition-all flex items-center gap-1"
+            >
+              <FileText size={10} />
+              <span>robots.txt</span>
+            </a>
+            <button
+              onClick={() => onNavigateLegal('NOT_FOUND')}
+              className="px-2.5 py-1 bg-obsidian/40 hover:bg-rose-500/20 border border-rose-500/30 rounded-lg text-rose-300 hover:text-rose-100 transition-all flex items-center gap-1 cursor-pointer"
+            >
+              <AlertTriangle size={10} />
+              <span>{isAr ? 'صفحة 404 (تجربة)' : 'Test 404 Page'}</span>
+            </button>
+          </div>
+
           <div className="text-center mt-3 text-[9px] text-gray-green/60 font-mono tracking-wider font-extrabold uppercase">
             © {new Date().getFullYear()} LCD DALULE • ALL RIGHTS RESERVED
           </div>

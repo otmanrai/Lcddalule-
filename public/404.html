@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <title>404 - الصفحة غير موجودة | LCD DALULE دليل الشاشات والمطابقات</title>
+    
+    <!-- Robots: Tell crawlers not to index this 404 page, but DO follow links to valid pages -->
+    <meta name="robots" content="noindex, follow" />
+    <meta name="description" content="عذراً، الصفحة أو كود الشاشة الذي تبحث عنه غير موجود أو تم نقله. تصفح دليل الشاشات والمطابقات وقطع غيار الهواتف الذكية." />
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='20' y='15' width='40' height='70' rx='8' fill='none' stroke='%2300A9FF' stroke-width='5' transform='rotate(15 40 50)'/><rect x='40' y='15' width='40' height='70' rx='8' fill='none' stroke='%230B3C73' stroke-width='5' transform='rotate(-15 60 50)'/></svg>">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+    
+    <style>
+      :root {
+        --bg-obsidian: #08121E;
+        --bg-teal: #0D2135;
+        --border-teal: #14293D;
+        --cyber-cyan: #00F2FE;
+        --emerald-glow: #059669;
+        --text-main: #F4F6F9;
+        --text-muted: #8C9FB8;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: 'Tajawal', sans-serif;
+        background-color: var(--bg-obsidian);
+        color: var(--text-main);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        padding: 24px 16px;
+        text-align: center;
+      }
+      .wrapper {
+        max-width: 680px;
+        width: 100%;
+        margin: auto;
+      }
+      .card {
+        background: radial-gradient(circle at top, #0F2A44 0%, var(--bg-teal) 100%);
+        border: 1px solid rgba(0, 242, 254, 0.25);
+        border-radius: 28px;
+        padding: 40px 24px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+        position: relative;
+        overflow: hidden;
+      }
+      .card::before {
+        content: '';
+        position: absolute;
+        top: -60px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 220px;
+        height: 220px;
+        background: radial-gradient(circle, rgba(0, 242, 254, 0.15) 0%, transparent 70%);
+        pointer-events: none;
+      }
+      .glitch-code {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 76px;
+        font-weight: 900;
+        line-height: 1;
+        background: linear-gradient(135deg, #00F2FE 0%, #4FACFE 50%, #00C6FF 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 35px rgba(0, 242, 254, 0.35);
+        margin-bottom: 12px;
+      }
+      .badge-404 {
+        display: inline-block;
+        padding: 6px 14px;
+        background: rgba(244, 63, 94, 0.15);
+        border: 1px solid rgba(244, 63, 94, 0.4);
+        color: #FDA4AF;
+        border-radius: 9999px;
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 20px;
+      }
+      h1 {
+        font-size: 24px;
+        font-weight: 900;
+        margin-bottom: 12px;
+        color: #FFFFFF;
+      }
+      p.subtitle {
+        color: var(--text-muted);
+        font-size: 14px;
+        line-height: 1.7;
+        margin-bottom: 28px;
+        max-width: 520px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      /* Search form */
+      .search-box {
+        display: flex;
+        gap: 8px;
+        max-width: 480px;
+        margin: 0 auto 28px;
+      }
+      .search-box input {
+        flex: 1;
+        padding: 12px 18px;
+        background: var(--bg-obsidian);
+        border: 1px solid var(--border-teal);
+        border-radius: 14px;
+        color: #FFFFFF;
+        font-size: 14px;
+        font-family: 'Tajawal', sans-serif;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .search-box input:focus {
+        border-color: var(--cyber-cyan);
+      }
+      .search-box button {
+        padding: 12px 22px;
+        background: linear-gradient(135deg, var(--cyber-cyan) 0%, #00A9FF 100%);
+        color: var(--bg-obsidian);
+        border: none;
+        border-radius: 14px;
+        font-weight: 900;
+        font-size: 14px;
+        cursor: pointer;
+        transition: transform 0.15s, opacity 0.15s;
+      }
+      .search-box button:hover {
+        transform: translateY(-1px);
+        opacity: 0.95;
+      }
+      /* Quick links */
+      .section-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--cyber-cyan);
+        margin-bottom: 12px;
+        text-align: right;
+      }
+      .chips-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+        margin-bottom: 24px;
+      }
+      .chip {
+        padding: 8px 14px;
+        background: rgba(8, 18, 30, 0.7);
+        border: 1px solid var(--border-teal);
+        color: #D1D5DB;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s;
+      }
+      .chip:hover {
+        border-color: var(--cyber-cyan);
+        color: var(--cyber-cyan);
+        transform: translateY(-2px);
+      }
+      /* Primary Action Buttons */
+      .action-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+        margin-top: 24px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 24px;
+        border-radius: 14px;
+        font-weight: 800;
+        font-size: 13px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, var(--cyber-cyan) 0%, #00A9FF 100%);
+        color: var(--bg-obsidian);
+      }
+      .btn-primary:hover {
+        opacity: 0.92;
+        transform: translateY(-1px);
+      }
+      .btn-secondary {
+        background: rgba(20, 41, 61, 0.7);
+        border: 1px solid var(--border-teal);
+        color: #FFFFFF;
+      }
+      .btn-secondary:hover {
+        border-color: var(--cyber-cyan);
+        color: var(--cyber-cyan);
+      }
+      /* Footer */
+      footer {
+        margin-top: 32px;
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+      footer a {
+        color: var(--cyber-cyan);
+        text-decoration: none;
+        margin: 0 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="card">
+        <div class="badge-404">رمز الخطأ: 404 NOT FOUND</div>
+        <div class="glitch-code">404</div>
+        <h1>عذراً، الصفحة أو القطعة غير موجودة!</h1>
+        <p class="subtitle">
+          الصفحة أو كود الشاشة الذي تحاول الوصول إليه غير موجود أو تم نقله.
+          استخدم محرك البحث أدناه أو تصفح الماركات والأقسام الأكثر زيارة:
+        </p>
+
+        <!-- Fast Search -->
+        <form class="search-box" action="/" method="GET" onsubmit="handleSearch(event)">
+          <input
+            id="qInput"
+            type="text"
+            placeholder="ابحث عن موديل هاتف (مثال: A15, Note 13, X6515)..."
+            required
+          />
+          <button type="submit">بحث الآن</button>
+        </form>
+
+        <!-- Popular Brands -->
+        <div class="section-title">ماركات الهواتف الشائعة:</div>
+        <div class="chips-grid">
+          <a class="chip" href="/?brand=samsung">سامسونج (Samsung)</a>
+          <a class="chip" href="/?brand=xiaomi">شاومي (Xiaomi / Redmi)</a>
+          <a class="chip" href="/?brand=apple">آبل (iPhone)</a>
+          <a class="chip" href="/?brand=infinix">إنفينيكس (Infinix)</a>
+          <a class="chip" href="/?brand=tecno">تكنو (Tecno)</a>
+          <a class="chip" href="/?brand=oppo">أوبو (Oppo)</a>
+          <a class="chip" href="/?brand=realme">ريلمي (Realme)</a>
+        </div>
+
+        <!-- Categories -->
+        <div class="section-title">أقسام قطع الغيار:</div>
+        <div class="chips-grid">
+          <a class="chip" href="/?category=LCD">📱 شاشات الهواتف (LCD)</a>
+          <a class="chip" href="/?category=BATTERY">🔋 بطاريات الأجهزة</a>
+          <a class="chip" href="/?category=IC">⚡ أيسيهات الشحن والباور</a>
+          <a class="chip" href="/?category=SCREEN_PROTECTOR">🛡️ لاصقات الحماية</a>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+          <a class="btn btn-primary" href="/">🏠 العودة للرئيسية</a>
+          <a class="btn btn-secondary" href="/?screen=comparator">⚖️ مقارن الشاشات</a>
+          <a class="btn btn-secondary" href="/?screen=community">💬 مجتمع الفنيين</a>
+          <a class="btn btn-secondary" href="/amp.html">⚡ نسخة AMP السريعة</a>
+        </div>
+      </div>
+
+      <footer>
+        <p>
+          دليل الشاشات والمطابقات - LCD DALULE &copy; <span id="year">2026</span>
+          | <a href="/sitemap.xml">خريطة الموقع (Sitemap)</a>
+          | <a href="/robots.txt">Robots.txt</a>
+          | <a href="/?screen=about">عن التطبيق</a>
+          | <a href="/?screen=privacy">سياسة الخصوصية</a>
+        </p>
+      </footer>
+    </div>
+
+    <script>
+      document.getElementById('year').textContent = new Date().getFullYear();
+      function handleSearch(e) {
+        e.preventDefault();
+        var q = document.getElementById('qInput').value.trim();
+        if (q) {
+          window.location.href = '/?search=' + encodeURIComponent(q);
+        }
+      }
+    </script>
+  </body>
+</html>
