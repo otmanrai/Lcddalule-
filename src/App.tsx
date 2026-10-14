@@ -747,6 +747,37 @@ function AppContent() {
     return [];
   });
 
+  // Dynamically update document title and canonical tag in client DOM for Search Engine Crawlers
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let canonicalLink = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonicalLink) {
+      canonicalLink = document.createElement('link');
+      canonicalLink.rel = 'canonical';
+      document.head.appendChild(canonicalLink);
+    }
+    
+    // Set canonical link to current full URL without hash
+    const cleanUrl = window.location.href.split('#')[0];
+    canonicalLink.href = cleanUrl;
+
+    // Also update document title for SEO
+    if (selectedModel && currentScreen === 'RESULTS') {
+      document.title = `${selectedModel.modelName} - شاشة وبدائل القطع | LCD DALULE`;
+    } else if (selectedBrand && currentScreen === 'MODEL_SELECT') {
+      document.title = `موديلات ${selectedBrand.name} - قطع الغيار والمطابقات | LCD DALULE`;
+    } else if (currentScreen === 'COMPARATOR') {
+      document.title = `مقارن الشاشات التفاعلي - LCD DALULE`;
+    } else if (currentScreen === 'COMMUNITY') {
+      document.title = `مجتمع فنيي الصيانة - LCD DALULE`;
+    } else if (currentScreen === 'NOT_FOUND') {
+      document.title = `404 الصفحة غير موجودة - LCD DALULE`;
+    } else {
+      document.title = `LCD DALULE - دليل الشاشات والمطابقات الفنية`;
+    }
+  }, [currentScreen, selectedModel, selectedBrand, selectedCategory]);
+
   // Register traffic tracking for registered users
   useEffect(() => {
     if (!user) return; // Only track registered users as requested

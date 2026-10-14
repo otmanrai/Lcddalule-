@@ -106,6 +106,17 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Enable proxy trusting so Express accurately detects https protocols on Cloud Run / proxies
+  app.set('trust proxy', 1);
+
+  // Helper to resolve canonical origin (guarantees https in non-local environments to prevent redirect loops)
+  function getCanonicalOrigin(req: express.Request): string {
+    const host = req.get('host') || 'dalule.app';
+    const isLocal = host.startsWith('localhost') || host.startsWith('127.0.0.1');
+    const protocol = isLocal ? 'http' : 'https';
+    return `${protocol}://${host}`;
+  }
+
   app.use(express.json());
 
   app.get("/api/health", (_req, res) => {
@@ -479,14 +490,14 @@ Keep your response concise, structured, clear, and actionable in ${language === 
 
   // 1. Robots.txt Route
   app.get('/robots.txt', (req, res) => {
-    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-    const host = req.get('host');
-    const sitemapUrl = `${protocol}://${host}/sitemap.xml`;
+    const origin = getCanonicalOrigin(req);
+    const sitemapUrl = `${origin}/sitemap.xml`;
     
     res.type('text/plain');
     res.send(`User-agent: *
 Allow: /
 Allow: /amp.html
+Allow: /amp
 Disallow: /api/
 Disallow: /admin/
 Disallow: /404
@@ -505,10 +516,22 @@ Sitemap: ${sitemapUrl}`);
     }
   });
 
-  // 3. Sitemap.xml Route - Comprehensive indexing for search engine crawlers
+  // 3. AMP Document Route with Absolute Canonical Link (Fixes relative canonical and redirect issues)
+  app.get(['/amp', '/amp.html'], (req, res) => {
+    const ampPath = path.join(process.cwd(), 'public', 'amp.html');
+    if (fs.existsSync(ampPath)) {
+      let content = fs.readFileSync(ampPath, 'utf8');
+      const origin = getCanonicalOrigin(req);
+      content = content.replace(/<link\s+rel=["']canonical["'][^>]*>/i, `<link rel="canonical" href="${origin}/" />`);
+      res.type('text/html').send(content);
+    } else {
+      res.status(404).send('AMP Page Not Found');
+    }
+  });
+
+  // 4. Sitemap.xml Route - Comprehensive indexing for search engine crawlers (Without alternate AMP pages to prevent Search Console canonical warnings)
   app.get('/sitemap.xml', async (req, res) => {
-    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-    const host = req.get('host');
+    const origin = getCanonicalOrigin(req);
     const today = new Date().toISOString().split('T')[0];
     
     // Set to collect unique model IDs dynamically
@@ -566,37 +589,36 @@ Sitemap: ${sitemapUrl}`);
       console.error("Error fetching ai_models for sitemap from Firestore:", e);
     }
 
-    // Core Hub & Section URLs with priorities
+    // Core Hub & Section Canonical URLs with priorities (Note: AMP is paired via link rel="amphtml", excluded from sitemap to prevent "alternate page with proper canonical tag" warning)
     const hubPages = [
-      { url: `${protocol}://${host}/`, priority: '1.0', changefreq: 'daily' },
-      { url: `${protocol}://${host}/amp.html`, priority: '0.9', changefreq: 'daily' },
+      { url: `${origin}/`, priority: '1.0', changefreq: 'daily' },
       // Categories
-      { url: `${protocol}://${host}/?category=LCD`, priority: '0.9', changefreq: 'daily' },
-      { url: `${protocol}://${host}/?category=BATTERY`, priority: '0.85', changefreq: 'daily' },
-      { url: `${protocol}://${host}/?category=IC`, priority: '0.85', changefreq: 'daily' },
-      { url: `${protocol}://${host}/?category=SCREEN_PROTECTOR`, priority: '0.8', changefreq: 'weekly' },
+      { url: `${origin}/?category=LCD`, priority: '0.9', changefreq: 'daily' },
+      { url: `${origin}/?category=BATTERY`, priority: '0.85', changefreq: 'daily' },
+      { url: `${origin}/?category=IC`, priority: '0.85', changefreq: 'daily' },
+      { url: `${origin}/?category=SCREEN_PROTECTOR`, priority: '0.8', changefreq: 'weekly' },
       // Brands
-      { url: `${protocol}://${host}/?brand=samsung`, priority: '0.9', changefreq: 'daily' },
-      { url: `${protocol}://${host}/?brand=xiaomi`, priority: '0.9', changefreq: 'daily' },
-      { url: `${protocol}://${host}/?brand=apple`, priority: '0.9', changefreq: 'daily' },
-      { url: `${protocol}://${host}/?brand=infinix`, priority: '0.85', changefreq: 'daily' },
-      { url: `${protocol}://${host}/?brand=tecno`, priority: '0.85', changefreq: 'daily' },
-      { url: `${protocol}://${host}/?brand=itel`, priority: '0.8', changefreq: 'weekly' },
-      { url: `${protocol}://${host}/?brand=oppo`, priority: '0.85', changefreq: 'daily' },
-      { url: `${protocol}://${host}/?brand=realme`, priority: '0.85', changefreq: 'daily' },
-      { url: `${protocol}://${host}/?brand=vivo`, priority: '0.8', changefreq: 'weekly' },
-      { url: `${protocol}://${host}/?brand=honor`, priority: '0.8', changefreq: 'weekly' },
-      { url: `${protocol}://${host}/?brand=huawei`, priority: '0.8', changefreq: 'weekly' },
+      { url: `${origin}/?brand=samsung`, priority: '0.9', changefreq: 'daily' },
+      { url: `${origin}/?brand=xiaomi`, priority: '0.9', changefreq: 'daily' },
+      { url: `${origin}/?brand=apple`, priority: '0.9', changefreq: 'daily' },
+      { url: `${origin}/?brand=vivo`, priority: '0.9', changefreq: 'daily' },
+      { url: `${origin}/?brand=oppo`, priority: '0.85', changefreq: 'daily' },
+      { url: `${origin}/?brand=realme`, priority: '0.85', changefreq: 'daily' },
+      { url: `${origin}/?brand=infinix`, priority: '0.85', changefreq: 'daily' },
+      { url: `${origin}/?brand=tecno`, priority: '0.85', changefreq: 'daily' },
+      { url: `${origin}/?brand=itel`, priority: '0.8', changefreq: 'weekly' },
+      { url: `${origin}/?brand=honor`, priority: '0.8', changefreq: 'weekly' },
+      { url: `${origin}/?brand=huawei`, priority: '0.8', changefreq: 'weekly' },
       // Interactive Tools
-      { url: `${protocol}://${host}/?screen=comparator`, priority: '0.85', changefreq: 'weekly' },
-      { url: `${protocol}://${host}/?screen=community`, priority: '0.85', changefreq: 'daily' },
-      { url: `${protocol}://${host}/?screen=search`, priority: '0.8', changefreq: 'weekly' },
-      { url: `${protocol}://${host}/?screen=ai`, priority: '0.75', changefreq: 'weekly' },
+      { url: `${origin}/?screen=comparator`, priority: '0.85', changefreq: 'weekly' },
+      { url: `${origin}/?screen=community`, priority: '0.85', changefreq: 'daily' },
+      { url: `${origin}/?screen=search`, priority: '0.8', changefreq: 'weekly' },
+      { url: `${origin}/?screen=ai`, priority: '0.75', changefreq: 'weekly' },
       // Legal & Info
-      { url: `${protocol}://${host}/?screen=about`, priority: '0.6', changefreq: 'monthly' },
-      { url: `${protocol}://${host}/?screen=privacy`, priority: '0.5', changefreq: 'monthly' },
-      { url: `${protocol}://${host}/?screen=terms`, priority: '0.5', changefreq: 'monthly' },
-      { url: `${protocol}://${host}/?screen=contact`, priority: '0.6', changefreq: 'monthly' },
+      { url: `${origin}/?screen=about`, priority: '0.6', changefreq: 'monthly' },
+      { url: `${origin}/?screen=privacy`, priority: '0.5', changefreq: 'monthly' },
+      { url: `${origin}/?screen=terms`, priority: '0.5', changefreq: 'monthly' },
+      { url: `${origin}/?screen=contact`, priority: '0.6', changefreq: 'monthly' },
     ];
 
     let urlsXml = '';
@@ -609,11 +631,11 @@ Sitemap: ${sitemapUrl}`);
   </url>\n`;
     });
 
-    // Model Specific Landing URLs
+    // Model Specific Landing URLs (Each gets its unique self-referencing canonical tag)
     modelIds.forEach(modelId => {
       const safeId = modelId.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       urlsXml += `  <url>
-    <loc>${protocol}://${host}/?model=${safeId}</loc>
+    <loc>${origin}/?model=${safeId}</loc>
     <lastmod>${today}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
@@ -628,8 +650,6 @@ ${urlsXml.trim()}
     res.type('application/xml');
     res.send(xml);
   });
-
-
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
@@ -663,7 +683,17 @@ ${urlsXml.trim()}
         const fs = await import("fs");
         const htmlPath = path.join(distPath, 'index.html');
         if (fs.existsSync(htmlPath)) {
-          const html = fs.readFileSync(htmlPath, 'utf-8');
+          let html = fs.readFileSync(htmlPath, 'utf-8');
+          const origin = getCanonicalOrigin(req);
+          const cleanPath = req.originalUrl.split('#')[0];
+          const canonicalUrl = `${origin}${cleanPath === '/' ? '/' : cleanPath}`;
+          
+          // Replace hardcoded canonical with exact URL to fix "Alternate page with proper canonical tag"
+          html = html.replace(/<link\s+rel=["']canonical["'][^>]*>/i, `<link rel="canonical" href="${canonicalUrl}" />`);
+          html = html.replace(/<meta\s+property=["']og:url["'][^>]*>/i, `<meta property="og:url" content="${canonicalUrl}" />`);
+          html = html.replace(/<meta\s+property=["']twitter:url["'][^>]*>/i, `<meta property="twitter:url" content="${canonicalUrl}" />`);
+          html = html.replace(/<link\s+rel=["']amphtml["'][^>]*>/i, `<link rel="amphtml" href="${origin}/amp.html" />`);
+
           res.send(html);
         } else {
           res.status(404).send("Not found");
